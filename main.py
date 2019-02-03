@@ -2,6 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import numpy as np
+import tensorflow as tf
 
 
 
@@ -25,7 +26,42 @@ def main():
         plt.imshow(img)
     plt.show()
 
-    # Every image is 480 x 640
+    # Note: Every image is 480 x 640
+
+    # classes = ['object', 'nothing']
+    classes = [0, 1]
+
+    chunk=5
+    # Segment the image and store it in list
+    imageSegment=[]
+
+    # Set class for each segment of image
+    segmentClasses=[]
+
+
+    # Make the model
+    # Add a dropout layer as well?
+
+    # Model Description:
+    # The input layer is flattened from 480/chunk, 640/chunk, 3 to a linear array
+    # There are 2 layers with relu activation (best in class)
+    # The final layer has two labels, either object or not object and
+    # the activation is softmax as if gives a smooth value from 0 to 1
+    # which tells us how much an image belongs to a class, i.e
+    # if the image is 0.9 object or 0.6 object
+    model = tf.keras.Sequential([
+        tf.keras.layers.Flatten(input_shape=(480/chunk, 640/chunk)),
+        tf.keras.layers.Dense(32, activation=tf.nn.relu),
+        tf.keras.layers.Dense(10, activation=tf.nn.relu),
+        tf.keras.layers.Dense(2, activation=tf.nn.softmax)
+    ])
+
+    model.compile(optimizer='adam',
+                  loss='sparse_categorical_crossentropy',
+                  metrics=['accuracy'])
+
+    # Train the model
+    model.fit(imageSegment, segmentClasses, epoch=5)
 
 
 
