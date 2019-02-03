@@ -32,12 +32,21 @@ def main():
     classes = [0, 1]
 
     chunk=5
+    lenImages=10
     # Segment the image and store it in list
     imageSegment=[]
+    for i in range(10):
+        imageSegment.append(getSegment(chunk))
 
     # Set class for each segment of image
     segmentClasses=[]
-
+    for i in range(lenImages*25):
+        if getArea(
+                [imageSegment[i%25][0], imageSegment[i%25][0]+480/chunk, imageSegment[i%25][1], imageSegment[i%25][1]+640/chunk],
+                trainingCSV.ix[i//25, 1:4]):
+            segmentClasses.append(1)
+        else:
+            segmentClasses.append(0)
 
     # Make the model
     # Add a dropout layer as well?
