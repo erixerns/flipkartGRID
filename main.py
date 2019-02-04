@@ -109,7 +109,9 @@ def main():
 
             # Segment the image and store it in list
             segment = rgb2gray(img[x1:x2, y1:y2, :])
-            segment = segment.astype(np.float16)
+            segment = segment.astype(np.float32)
+            # plt.imshow(segment)
+            # plt.show()
             imageSegment.append(segment)
 
             # Set class for each segment of image
