@@ -89,8 +89,8 @@ def main():
     chunks = 5
     rows = chunks
     cols = chunks
-    for j in range(1000):
-        print("\nImg: ",j," of 1000")
+    for j in range(2000):
+        print("\nImg: ",j," of 2000")
         img = plt.imread("images/" + trainingCSV.ix[j, 0])
         # img.shape
 
@@ -109,6 +109,7 @@ def main():
 
             # Segment the image and store it in list
             segment = rgb2gray(img[x1:x2, y1:y2, :])
+            segment = segment.astype(np.float16)
             imageSegment.append(segment)
 
             # Set class for each segment of image
@@ -152,7 +153,7 @@ def main():
                   metrics=['accuracy'])
 
     # Train the model
-    model.fit(imageSegment, segmentClasses, epochs=5)
+    model.fit(imageSegment, segmentClasses, epochs=20)
 
     # Run Main
 
