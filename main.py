@@ -7,7 +7,7 @@ import tensorflow as tf
 
 # Returns an array that gives the coords of starting point
 # of each segment.
-def chunk(chunks):
+def getSegments(chunks):
     # X and Y are constant
     height = 640
     width = 480
@@ -44,13 +44,16 @@ def getArea(list1, list2):
         return 0
 
     elif ((f1 and f2 and f3 and f4) == 1):
-        return areaOfBox(list1)
+        return areaOfBox(list1) / ((list1[3] - list1[1]) * (list1[2] - list1[0]))
     else:
         x1 = max(list1[0], list2[0])
         x2 = min(list1[2], list2[2])
         y1 = max(list1[1], list2[1])
         y2 = min(list1[3], list2[3])
-        return areaOfBox([x1, y1, x2, y2])
+        return areaOfBox([x1, y1, x2, y2]) / ((list1[3] - list1[1]) * (list1[2] - list1[0]))
+
+def rgb2gray(rgb):
+    return np.dot(rgb[...,:3], [0.299, 0.587, 0.114])
 
 
 # Main function
@@ -78,71 +81,81 @@ def main():
 
     # Note: Every image is 480 x 640
 
-    # Split the first image into chunks
-    img = plt.imread("images/" + trainingCSV.ix[0, 0])
-    img.shape
+    imageSegment = []
+    segmentClasses = []
 
+
+    # Split the images into chunks
     chunks = 5
     rows = chunks
     cols = chunks
-    plt.imshow(img)
-    plt.show()
+    for j in range(1000):
+        print("\nImg: ",j," of 1000")
+        img = plt.imread("images/" + trainingCSV.ix[j, 0])
+        # img.shape
 
-    fig1 = plt.figure(figsize=(8, 8))
-    chunkSegment = chunk(chunks)
-    print(chunkSegment)
-    for i in range(1, rows * cols + 1):
-        segment = img[chunkSegment[i - 1][0]:chunkSegment[i - 1][0] + int(480 / chunks),
-                  chunkSegment[i - 1][1]:chunkSegment[i - 1][1] + int(640 / chunks), :]
-        print(chunkSegment[i - 1][0],chunkSegment[i - 1][0] + int(480 / chunks),chunkSegment[i - 1][1],chunkSegment[i - 1][1] + int(640 / chunks))
-        fig1.add_subplot(rows, cols, i)
-        plt.imshow(segment)
-    plt.show()
-        # classes = ['object', 'nothing']
+        # plt.imshow(img)
+        # plt.show()
+
+        # fig1 = plt.figure(figsize=(8, 8))
+        chunkSegment = getSegments(chunks)
+        # Segment the images
+        for i in range(1, rows * cols + 1):
+            print(".",end='')
+            x1 = chunkSegment[i - 1][0]
+            x2 = chunkSegment[i - 1][0] + int(480 / chunks)
+            y1 = chunkSegment[i - 1][1]
+            y2 = chunkSegment[i - 1][1] + int(640 / chunks)
+
+            # Segment the image and store it in list
+            segment = rgb2gray(img[x1:x2, y1:y2, :])
+            imageSegment.append(segment)
+
+            # Set class for each segment of image
+            area = getArea([y1, x1, y2, x2],
+                           [trainingCSV.ix[0, 1], trainingCSV.ix[0, 3], trainingCSV.ix[0, 2], trainingCSV.ix[0, 4]])
+            if area >= 0.5:
+                segmentClasses.append(1)
+            else:
+                segmentClasses.append(0)
+
+            # fig1.add_subplot(rows, cols, i)
+            # plt.imshow(segment)
+        # plt.show()
+
+
+    print("\nTotal Segments: ", len(imageSegment))
+    imageSegment = np.asarray(imageSegment)
+    # classes = ['nothing', 'object']
     classes = [0, 1]
-        #
-        # chunk=5
-        # lenImages=10
-        # # Segment the image and store it in list
-        # imageSegment=[]
-        # for i in range(10):
-        #     imageSegment.append(getSegment(chunk))
-        #
-        # # Set class for each segment of image
-        # segmentClasses=[]
-        # for i in range(lenImages*25):
-        #     if getArea(
-        #             [imageSegment[i%25][0], imageSegment[i%25][1], imageSegment[i%25][0]+480/chunk, imageSegment[i%25][1]+640/chunk],
-        #             trainingCSV.ix[i//25, 1:4]):
-        #         segmentClasses.append(1)
-        #     else:
-        #         segmentClasses.append(0)
 
-        # Make the model
-        # Add a dropout layer as well?
+    # Make the model
+    # Add a dropout layer as well?
 
-        # Model Description:
-        # The input layer is flattened from 480/chunk, 640/chunk, 3 to a linear array
-        # There are 2 layers with relu activation (best in class)
-        # The final layer has two labels, either object or not object and
-        # the activation is softmax as if gives a smooth value from 0 to 1
-        # which tells us how much an image belongs to a class, i.e
-        # if the image is 0.9 object or 0.6 object
+    # Model Description:
+    # The input layer is flattened from 480/chunk, 640/chunk, 3 to a linear array
+    # There are 2 layers with relu activation (best in class)
+    # The final layer has two labels, either object or not object and
+    # the activation is softmax as if gives a smooth value from 0 to 1
+    # which tells us how much an image belongs to a class, i.e
+    # if the image is 0.9 object or 0.6 object
 
-        # model = tf.keras.Sequential([
-        #     tf.keras.layers.Flatten(input_shape=(480/chunk, 640/chunk)),
-        #     tf.keras.layers.Dense(32, activation=tf.nn.relu),
-        #     tf.keras.layers.Dense(10, activation=tf.nn.relu),
-        #     tf.keras.layers.Dense(2, activation=tf.nn.softmax)
-        # ])
-        #
-        # model.compile(optimizer='adam',
-        #               loss='sparse_categorical_crossentropy',
-        #               metrics=['accuracy'])
-        #
-        # # Train the model
-        # model.fit(imageSegment, segmentClasses, epoch=5)
+    model = tf.keras.Sequential([
+        tf.keras.layers.Flatten(input_shape=(480 / chunks, 640 / chunks)),
+        tf.keras.layers.Dense(32, activation=tf.nn.relu),
+        tf.keras.layers.Dense(10, activation=tf.nn.relu),
+        tf.keras.layers.Dense(2, activation=tf.nn.softmax)
+    ])
 
-        # Run Main
+    model.compile(optimizer='adam',
+                  loss='sparse_categorical_crossentropy',
+                  metrics=['accuracy'])
+
+    # Train the model
+    model.fit(imageSegment, segmentClasses, epochs=5)
+
+    # Run Main
+
+
 if __name__ == "__main__":
     main()
